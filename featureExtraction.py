@@ -1,57 +1,106 @@
 import numpy as np
 import pywt
 import math
-
+import matplotlib.pyplot as plt
+from scipy import stats, signal
 
 
 
 #input x should be an array with shape(Channel, dataPoint)
 #all returned feature is in list
 
-def power( x ):
+# all feature extraction function is for one channel of signal
+# 5 frequency bands
+def frequencyBand(data):
     fea = []
-    if(len(x.shape)!=1):
-        for ele in x:
-            F = np.fft.fft(ele)
-            P = F * np.conjugate(F)
-            fea.append(sum(P))
-    else:
-        F = np.fft.fft(x)
-        P = F * np.conjugate(F)
-        fea.append(sum(P))
+    fs = 100                                # Sampling rate (512 Hz)
+    # data = np.random.uniform(0, 100, 1024)  # 2 sec of data b/w 0.0-100.0
+    
+    # Get real amplitudes of FFT (only in postive frequencies)
+    fft_vals = np.absolute(np.fft.rfft(data))
+    
+    # Get frequencies for amplitudes in Hz
+    fft_freq = np.fft.rfftfreq(len(data), 1.0/fs)
+    
+    # Define EEG bands
+    eeg_bands = {'Delta': (0.5, 4),
+                 'Theta': (4, 8),
+                 'Alpha': (8, 13),
+                 'Beta': (13, 20),
+                 'Gamma': (20, 50),
+                 'Sleep_Spindle': (12, 14)}
+    
+    # Take the mean of the fft amplitude for each EEG band
+    eeg_band_fft = dict()
+    for band in eeg_bands:  
+        freq_ix = np.where((fft_freq >= eeg_bands[band][0]) & 
+                           (fft_freq <= eeg_bands[band][1]))[0]
+        eeg_band_fft[band] = np.mean(fft_vals[freq_ix])
+    
+    # # Plot the data (using pandas here cause it's easy)
+    # import pandas as pd
+    # df = pd.DataFrame(columns=['band', 'val'])
+    # df['band'] = eeg_bands.keys()
+    # df['val'] = [eeg_band_fft[band] for band in eeg_bands]
+    # ax = df.plot.bar(x='band', y='val', legend=False)
+    # ax.set_xlabel("EEG band")
+    # ax.set_ylabel("Mean band Amplitude")
+    # # plt.show()
+    for band in eeg_bands:
+        fea.append(eeg_band_fft[band])
+        
+    return fea
+
+#
+# def power( data ):
+#     fea = []
+#     F = np.fft.fft(data)
+#     P = F * np.conjugate(F)
+#     fea.append(sum(P))
+#     return fea
+
+
+def mean(data):
+    fea = []
+    fea.append(np.mean(data))
     return fea
 
 
-def mean(x):
+def std(data):
     fea = []
-    if(len(x.shape)!=1):
-        for ele in x:
-            fea.append(np.mean(ele))
-    else:
-        fea.append(np.mean(x))
+    fea.append(np.std(data))
     return fea
 
-def std( x ):
+
+def variance(data):
     fea = []
-    if (len(x.shape) != 1):
-        for ele in x:
-            fea.append(np.std(ele))
-    else:
-        fea.append(np.std(x))
+    fea.append(np.var(data))
+    return fea
+
+
+def kurtosis(data):
+    fea = []
+    fea.append(stats.kurtosis(data))
+    return fea
+
+
+def spectralEntropy(data):
+    fea = []
+    _, psd = signal.periodogram(data, 100) #frequency = 100
+    psd_norm = np.divide(psd, psd.sum())
+    se = -np.multiply(psd_norm, np.log2(psd_norm)).sum()
+
+    #TODO:how to handle NaN case
+
+    if math.isnan(se):
+        se = 0
+    fea.append(se)
     return fea
 
 
 
 
 #TODO:
-# def SpectralEntropy( x ):
-#     fs = 128
-#     band = [1,4,8,12,30]
-#     b = pyeeg.bin_power(x,band,fs)
-#     resp = pyeeg.spectral_entropy(x,band,fs,Power_Ratio=b)
-#
-#     resp = [0 if math.isnan(x) else x for x in resp]
-#     return resp
 #
 # def DWT( x ):
 #     fea = []
@@ -63,18 +112,27 @@ def std( x ):
 #     return fea
 
 
-
-def process(data, numOfFrames, usePower, useMean, useStd):
-    epoch = len(data[0])//numOfFrames
+def process(data, dataPerEpoch, usePower, useMean, useStd, useVariance, useFreqBand, useKurtosis, useSpectralEntropy):
+    numOfEpoch = len(data[0])//dataPerEpoch
     totalFeature = []
-    for i in range(epoch):
+    for i in range(numOfEpoch):
         feature = []
         for channel in data:
-            if usePower:
-                feature.extend(power(channel[i * numOfFrames:(i + 1) * numOfFrames]))
+            # if usePower:
+            #     feature.extend(power(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
             if useMean:
-                feature.extend(mean(channel[i * numOfFrames:(i + 1) * numOfFrames]))
+                feature.extend(mean(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
             if useStd:
-                feature.extend(std(channel[i * numOfFrames:(i + 1) * numOfFrames]))
+                feature.extend(std(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
+            if useVariance:
+                feature.extend(variance(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
+            if useFreqBand:
+                feature.extend(frequencyBand(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
+            if useKurtosis:
+                feature.extend(kurtosis(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
+            if useSpectralEntropy:
+                feature.extend(spectralEntropy(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
         totalFeature.append(feature)
+    totalFeature = np.array(totalFeature)
+    print(totalFeature.shape)
     return totalFeature
