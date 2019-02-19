@@ -134,5 +134,5 @@ def process(data, dataPerEpoch, usePower, useMean, useStd, useVariance, useFreqB
                 feature.extend(spectralEntropy(channel[i * dataPerEpoch:(i + 1) * dataPerEpoch]))
         totalFeature.append(feature)
     totalFeature = np.array(totalFeature)
-    print(totalFeature.shape)
+    # print(totalFeature.shape)
     return totalFeature

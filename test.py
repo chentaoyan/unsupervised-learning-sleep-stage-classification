@@ -1,5 +1,6 @@
 from edfVisualization import readEEGSignal,plotRawData,plot3D,plotLabel,temporalPlotHypnogram
 from featureExtraction import process,spectralEntropy
+from analysis import compare
 from model import kmeans
 import numpy as np
 import pyedflib
@@ -7,7 +8,7 @@ import pyedflib
 
 #use two channel of data  Fz and Cp
 #this two channel have same length
-
+#all data is stored in oe ['W', 'S1', 'S2', 'SWS', 'REM']
 
 #
 # data = readEEGSignal('Data/SC4001E0-PSG.edf')[:,2880000:5400000] #based on the other paper
@@ -81,5 +82,21 @@ import pyedflib
 # # plot3D(feature,centroids,labels)
 # # plotLabel(labels)
 # np.savetxt("label.csv", labels,fmt="%d")
-label = np.loadtxt("label.csv")
-temporalPlotHypnogram(label)
+# label = np.loadtxt("label.csv")
+# temporalPlotHypnogram(label)
+
+
+#0219 whole process of how to generate result
+data = readEEGSignal('Data/SC4001E0-PSG.edf')[:,2880000:5400000] #based on the other paper
+# print(data.shape)
+# plotRawData(data)
+dataPerEpoch = 30*100 #30 sec
+feature = process(data,dataPerEpoch,True,True,True,True,True,True,True)
+model, centroids, labels = kmeans(feature,5)
+choices = compare(centroids)
+temporalPlotHypnogram(labels,choices)
+
+# label = np.loadtxt("resultOfMyModel/label.csv")
+# feature = np.loadtxt("resultOfMyModel/averageFeature.csv")
+# choices = compare(feature)
+# temporalPlotHypnogram(label,choices)

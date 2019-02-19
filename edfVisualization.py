@@ -29,6 +29,12 @@ def plotRawData(multiChannel):
             plt.plot(multiChannel[i])
     plt.show()
 
+def plotSeparateSignal(signal,title):
+    plt.title(title)
+    for i in range(len(signal)):
+        plt.plot(signal[i])
+    plt.show()
+
 
 def plot3D(processedData,centerOfCluster,labels):
     colors = ['r', 'g', 'b', 'y', 'c', 'm']
@@ -108,12 +114,16 @@ def plotHypnogram(stages, labels=None, title='', ax1=None, **kwargs):
 
 
 
-def temporalPlotHypnogram(stages, labels=None, title='', ax1=None, **kwargs):
+def temporalPlotHypnogram(stages, choices=None, title='', ax1=None, **kwargs):
 
     print('assuming 0=W, 1=S1, 2=S2, 3=SWS, 4=REM')
-    labels = ['SWS', 'S2', 'REM', 'S1', 'W']
+    defaultLabels = ['W', 'S1', 'S2', 'SWS', 'REM']
+    labels = []
+    for choice in choices:
+        labels.append(defaultLabels[choice])
 
     labels_dict = dict(zip(np.arange(len(labels)), labels))
+    print(labels_dict)
 
     x = []
     y = []
